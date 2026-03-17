@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TableLedger – Restaurant Accounting by hellobooks.ai</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0F0D0B;
+    --surface: #1A1714;
+    --card: #221F1B;
+    --border: #2E2A25;
+    --amber: #E8A838;
+    --amber-dim: #C4882A;
+    --amber-glow: rgba(232,168,56,0.12);
+    --green: #3DB87A;
+    --red: #E05252;
+    --text: #F2EDE6;
+    --muted: #8A8178;
+    --white: #FDFAF6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
+
+  /* Sidebar */
+  .sidebar {
+    position: fixed; left: 0; top: 0; width: 220px; height: 100vh;
+    background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 28px 0; z-index: 10;
+  }
+  .logo { padding: 0 20px 32px; }
+  .logo-mark { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 900; color: var(--amber); letter-spacing: -0.5px; }
+  .logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+  .nav-section { padding: 0 12px; margin-bottom: 8px; }
+  .nav-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); padding: 0 8px; margin-bottom: 6px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 9px 10px;
+    border-radius: 8px; cursor: pointer; font-size: 13.5px; color: var(--muted);
+    transition: all 0.2s; margin-bottom: 1px;
+  }
+  .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+  .nav-item.active { color: var(--amber); background: var(--amber-glow); }
+  .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+  .sidebar-footer { margin-top: auto; padding: 16px 20px; border-top: 1px solid var(--border); }
+  .ai-badge { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--amber-glow); border: 1px solid rgba(232,168,56,0.2); border-radius: 10px; cursor: pointer; }
+  .ai-dot { width: 8px; height: 8px; background: var(--amber); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity: 0.4; } }
+  .ai-text { font-size: 12px; color: var(--amber); font-weight: 500; }
+
+  /* Main */
+  .main { margin-left: 220px; padding: 32px 36px; min-height: 100vh; }
+
+  /* Top bar */
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 32px; }
+  .page-title { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; color: var(--white); }
+  .page-subtitle { font-size: 13px; color: var(--muted); margin-top: 3px; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .date-filter { display: flex; background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .date-btn { padding: 7px 14px; font-size: 12px; cursor: pointer; transition: 0.2s; color: var(--muted); }
+  .date-btn.active { background: var(--amber); color: #000; font-weight: 600; }
+  .avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--amber), #c47c1a); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #000; cursor: pointer; }
+
+  /* Stats row */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px 22px; position: relative; overflow: hidden; transition: transform 0.2s;
+  }
+  .stat-card:hover { transform: translateY(-2px); }
+  .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--amber); opacity: 0.4; }
+  .stat-card.green::before { background: var(--green); }
+  .stat-card.red::before { background: var(--red); }
+  .stat-label { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .stat-value { font-family: 'Playfair Display', serif; font-size: 30px; font-weight: 700; color: var(--white); }
+  .stat-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; margin-top: 8px; padding: 3px 8px; border-radius: 20px; }
+  .stat-badge.up { background: rgba(61,184,122,0.12); color: var(--green); }
+  .stat-badge.down { background: rgba(224,82,82,0.12); color: var(--red); }
+  .stat-icon { position: absolute; right: 18px; top: 18px; font-size: 26px; opacity: 0.12; }
+
+  /* Grid layout */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px; }
+
+  /* Panels */
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 22px 24px; }
+  .panel-title { font-size: 14px; font-weight: 600; color: var(--white); margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; }
+  .panel-title span { font-size: 11px; color: var(--amber); cursor: pointer; font-weight: 400; }
+
+  /* Revenue chart */
+  .chart-bars { display: flex; align-items: flex-end; gap: 8px; height: 120px; margin-bottom: 8px; }
+  .bar-group { flex: 1; display: flex; align-items: flex-end; gap: 2px; }
+  .bar { flex: 1; border-radius: 4px 4px 0 0; transition: opacity 0.2s; cursor: pointer; }
+  .bar:hover { opacity: 0.8; }
+  .bar.revenue { background: var(--amber); }
+  .bar.cost { background: var(--border); }
+  .chart-labels { display: flex; gap: 8px; }
+  .chart-label { flex: 1; text-align: center; font-size: 10px; color: var(--muted); }
+
+  /* Shift breakdown */
+  .shift-bars { display: flex; flex-direction: column; gap: 10px; }
+  .shift-item { display: flex; align-items: center; gap: 12px; }
+  .shift-name { font-size: 12px; color: var(--muted); width: 60px; }
+  .shift-bar-bg { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .shift-bar-fill { height: 100%; border-radius: 4px; background: var(--amber); }
+  .shift-val { font-size: 12px; font-weight: 600; color: var(--white); width: 60px; text-align: right; }
+
+  /* Expense table */
+  .expense-table { width: 100%; border-collapse: collapse; }
+  .expense-table th { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); padding: 0 12px 12px 0; text-align: left; font-weight: 500; }
+  .expense-table td { padding: 11px 12px 11px 0; font-size: 13px; border-top: 1px solid var(--border); vertical-align: middle; }
+  .expense-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .cat-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 8px; }
+  .status-pill { padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+  .status-pill.paid { background: rgba(61,184,122,0.12); color: var(--green); }
+  .status-pill.pending { background: rgba(232,168,56,0.12); color: var(--amber); }
+  .status-pill.overdue { background: rgba(224,82,82,0.12); color: var(--red); }
+
+  /* AI Widget */
+  .ai-widget { background: linear-gradient(135deg, #1C1A16, #211E18); border: 1px solid rgba(232,168,56,0.25); border-radius: 14px; padding: 20px 22px; }
+  .ai-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .ai-avatar { width: 34px; height: 34px; border-radius: 10px; background: var(--amber-glow); border: 1px solid rgba(232,168,56,0.3); display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .ai-name { font-size: 13px; font-weight: 600; color: var(--amber); }
+  .ai-role { font-size: 11px; color: var(--muted); }
+  .ai-insights { display: flex; flex-direction: column; gap: 10px; }
+  .insight { display: flex; gap: 10px; padding: 10px 12px; background: rgba(255,255,255,0.03); border-radius: 9px; border-left: 2px solid var(--amber); }
+  .insight-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .insight-text { font-size: 12.5px; color: var(--text); line-height: 1.5; }
+  .insight-text strong { color: var(--amber); }
+  .ai-input-row { display: flex; gap: 8px; margin-top: 14px; }
+  .ai-input { flex: 1; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; color: var(--text); font-size: 13px; font-family: inherit; outline: none; }
+  .ai-input:focus { border-color: rgba(232,168,56,0.4); }
+  .ai-input::placeholder { color: var(--muted); }
+  .ai-send { background: var(--amber); color: #000; border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+
+  /* Food cost tracker */
+  .food-items { display: flex; flex-direction: column; gap: 8px; }
+  .food-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: rgba(255,255,255,0.02); border-radius: 9px; border: 1px solid var(--border); }
+  .food-emoji { font-size: 20px; }
+  .food-info { flex: 1; }
+  .food-name { font-size: 13px; font-weight: 500; color: var(--white); }
+  .food-detail { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .food-cost { font-size: 13px; font-weight: 600; }
+  .food-pct { font-size: 11px; color: var(--muted); }
+  .cost-high { color: var(--red); }
+  .cost-ok { color: var(--green); }
+  .cost-warn { color: var(--amber); }
+
+  /* Mini heatmap */
+  .heatmap { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .heatmap-cell { aspect-ratio: 1; border-radius: 3px; cursor: pointer; transition: transform 0.15s; }
+  .heatmap-cell:hover { transform: scale(1.2); }
+  .heat-0 { background: var(--border); }
+  .heat-1 { background: rgba(232,168,56,0.2); }
+  .heat-2 { background: rgba(232,168,56,0.4); }
+  .heat-3 { background: rgba(232,168,56,0.65); }
+  .heat-4 { background: var(--amber); }
+  .heatmap-labels { display: flex; justify-content: space-around; margin-top: 6px; }
+  .hm-label { font-size: 10px; color: var(--muted); }
+
+  /* Invoice quick add */
+  .quick-form { display: flex; flex-direction: column; gap: 10px; }
+  .form-row { display: flex; gap: 10px; }
+  .form-group { flex: 1; }
+  .form-label { font-size: 11px; color: var(--muted); margin-bottom: 5px; display: block; }
+  .form-input { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; color: var(--text); font-size: 13px; font-family: inherit; outline: none; }
+  .form-input:focus { border-color: rgba(232,168,56,0.4); }
+  .form-select { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; color: var(--text); font-size: 13px; font-family: inherit; outline: none; cursor: pointer; }
+  .btn-primary { background: var(--amber); color: #000; border: none; border-radius: 8px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; width: 100%; margin-top: 4px; }
+  .btn-primary:hover { background: var(--amber-dim); }
+  .ai-suggest-row { display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: var(--amber-glow); border-radius: 7px; }
+  .ai-suggest-text { font-size: 12px; color: var(--amber); }
+
+  /* Scroll */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Subtle entrance */
+  .main > * { animation: fadeUp 0.4s ease both; }
+  .main > *:nth-child(2) { animation-delay: 0.05s; }
+  .main > *:nth-child(3) { animation-delay: 0.1s; }
+  .main > *:nth-child(4) { animation-delay: 0.15s; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">TableLedger</div>
+    <div class="logo-sub">by hellobooks.ai</div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Overview</div>
+    <div class="nav-item active"><span class="icon">◉</span> Dashboard</div>
+    <div class="nav-item"><span class="icon">📊</span> Revenue</div>
+    <div class="nav-item"><span class="icon">🔥</span> Food Costs</div>
+    <div class="nav-item"><span class="icon">👥</span> Labour</div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Finance</div>
+    <div class="nav-item"><span class="icon">🧾</span> Invoices</div>
+    <div class="nav-item"><span class="icon">💳</span> Expenses</div>
+    <div class="nav-item"><span class="icon">🏦</span> Bank Feed</div>
+    <div class="nav-item"><span class="icon">📦</span> Inventory</div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Reports</div>
+    <div class="nav-item"><span class="icon">📑</span> P&amp;L Statement</div>
+    <div class="nav-item"><span class="icon">🧮</span> Tax Summary</div>
+    <div class="nav-item"><span class="icon">⚙️</span> Settings</div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="ai-badge">
+      <div class="ai-dot"></div>
+      <div class="ai-text">AI Sous-Chef active</div>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+  <!-- Topbar -->
+  <div class="topbar">
+    <div>
+      <div class="page-title">Spice Garden · Dashboard</div>
+      <div class="page-subtitle">Tuesday, 17 March 2026 · All outlets</div>
+    </div>
+    <div class="topbar-right">
+      <div class="date-filter">
+        <div class="date-btn">Today</div>
+        <div class="date-btn">Week</div>
+        <div class="date-btn active">Month</div>
+        <div class="date-btn">Quarter</div>
+      </div>
+      <div class="avatar">SG</div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Monthly Revenue</div>
+      <div class="stat-value">₹8.4L</div>
+      <div class="stat-badge up">▲ 12.3% vs last month</div>
+      <div class="stat-icon">💰</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Net Profit</div>
+      <div class="stat-value">₹1.9L</div>
+      <div class="stat-badge up">▲ 8.7% vs last month</div>
+      <div class="stat-icon">📈</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Food Cost %</div>
+      <div class="stat-value">31.4%</div>
+      <div class="stat-badge down">▼ Target: 28%</div>
+      <div class="stat-icon">🥗</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Labour Cost %</div>
+      <div class="stat-value">26.2%</div>
+      <div class="stat-badge up">✓ Within budget</div>
+      <div class="stat-icon">👨‍🍳</div>
+    </div>
+  </div>
+
+  <!-- Revenue chart + Shift breakdown -->
+  <div class="grid-2">
+    <div class="panel">
+      <div class="panel-title">Revenue vs Food Cost <span>View full →</span></div>
+      <div class="chart-bars">
+        <div class="bar-group"><div class="bar revenue" style="height:65%"></div><div class="bar cost" style="height:28%"></div></div>
+        <div class="bar-group"><div class="bar revenue" style="height:72%"></div><div class="bar cost" style="height:30%"></div></div>
+        <div class="bar-group"><div class="bar revenue" style="height:58%"></div><div class="bar cost" style="height:25%"></div></div>
+        <div class="bar-group"><div class="bar revenue" style="height:80%"></div><div class="bar cost" style="height:33%"></div></div>
+        <div class="bar-group"><div class="bar revenue" style="height:88%"></div><div class="bar cost" style="height:36%"></div></div>
+        <div class="bar-group"><div class="bar revenue" style="height:76%"></div><div class="bar cost" style="height:31%"></div></div>
+        <div class="bar-group"><div class="bar revenue" style="height:94%"></div><div class="bar cost" style="height:38%"></div></div>
+        <div class="bar-group"><div class="bar revenue" style="height:82%"></div><div class="bar cost" style="height:32%"></div></div>
+      </div>
+      <div class="chart-labels">
+        <div class="chart-label">8</div><div class="chart-label">9</div>
+        <div class="chart-label">10</div><div class="chart-label">11</div>
+        <div class="chart-label">12</div><div class="chart-label">13</div>
+        <div class="chart-label">14</div><div class="chart-label">15</div>
+      </div>
+      <div style="display:flex;gap:16px;margin-top:12px;">
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)"><div style="width:10px;height:10px;border-radius:2px;background:var(--amber)"></div>Revenue</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)"><div style="width:10px;height:10px;border-radius:2px;background:var(--border)"></div>Food Cost</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Revenue by Shift <span>Edit shifts →</span></div>
+      <div class="shift-bars">
+        <div class="shift-item">
+          <div class="shift-name">Breakfast</div>
+          <div class="shift-bar-bg"><div class="shift-bar-fill" style="width:28%;background:rgba(232,168,56,0.5)"></div></div>
+          <div class="shift-val">₹1.2L</div>
+        </div>
+        <div class="shift-item">
+          <div class="shift-name">Lunch</div>
+          <div class="shift-bar-bg"><div class="shift-bar-fill" style="width:72%;"></div></div>
+          <div class="shift-val">₹3.1L</div>
+        </div>
+        <div class="shift-item">
+          <div class="shift-name">Dinner</div>
+          <div class="shift-bar-bg"><div class="shift-bar-fill" style="width:94%;background:#e07038"></div></div>
+          <div class="shift-val">₹4.1L</div>
+        </div>
+        <div class="shift-item">
+          <div class="shift-name">Takeaway</div>
+          <div class="shift-bar-bg"><div class="shift-bar-fill" style="width:18%;background:rgba(61,184,122,0.6)"></div></div>
+          <div class="shift-val">₹0.77L</div>
+        </div>
+      </div>
+      <div style="margin-top:20px;">
+        <div class="panel-title" style="font-size:13px;margin-bottom:12px;">Revenue Heatmap — This Week</div>
+        <div class="heatmap">
+          <div class="heatmap-cell heat-2"></div><div class="heatmap-cell heat-3"></div>
+          <div class="heatmap-cell heat-1"></div><div class="heatmap-cell heat-4"></div>
+          <div class="heatmap-cell heat-3"></div><div class="heatmap-cell heat-2"></div>
+          <div class="heatmap-cell heat-4"></div>
+          <div class="heatmap-cell heat-1"></div><div class="heatmap-cell heat-2"></div>
+          <div class="heatmap-cell heat-3"></div><div class="heatmap-cell heat-4"></div>
+          <div class="heatmap-cell heat-4"></div><div class="heatmap-cell heat-3"></div>
+          <div class="heatmap-cell heat-4"></div>
+          <div class="heatmap-cell heat-0"></div><div class="heatmap-cell heat-1"></div>
+          <div class="heatmap-cell heat-0"></div><div class="heatmap-cell heat-2"></div>
+          <div class="heatmap-cell heat-1"></div><div class="heatmap-cell heat-0"></div>
+          <div class="heatmap-cell heat-1"></div>
+        </div>
+        <div class="heatmap-labels">
+          <span class="hm-label">Mon</span><span class="hm-label">Tue</span><span class="hm-label">Wed</span>
+          <span class="hm-label">Thu</span><span class="hm-label">Fri</span><span class="hm-label">Sat</span><span class="hm-label">Sun</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Expenses + AI Widget -->
+  <div class="grid-3">
+    <div class="panel">
+      <div class="panel-title">Recent Expenses <span>Add expense →</span></div>
+      <table class="expense-table">
+        <thead>
+          <tr>
+            <th>Category</th><th>Vendor</th><th>Amount</th><th>Date</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="cat-dot" style="background:#E8A838"></span>Ingredients</td>
+            <td style="color:var(--muted)">Metro Cash & Carry</td>
+            <td style="font-weight:600">₹42,800</td>
+            <td style="color:var(--muted);font-size:12px">15 Mar</td>
+            <td><span class="status-pill paid">Paid</span></td>
+          </tr>
+          <tr>
+            <td><span class="cat-dot" style="background:#3DB87A"></span>Labour</td>
+            <td style="color:var(--muted)">Staff Payroll</td>
+            <td style="font-weight:600">₹1,10,400</td>
+            <td style="color:var(--muted);font-size:12px">14 Mar</td>
+            <td><span class="status-pill paid">Paid</span></td>
+          </tr>
+          <tr>
+            <td><span class="cat-dot" style="background:#5B8DEF"></span>Utilities</td>
+            <td style="color:var(--muted)">BSES Electricity</td>
+            <td style="font-weight:600">₹18,200</td>
+            <td style="color:var(--muted);font-size:12px">12 Mar</td>
+            <td><span class="status-pill pending">Pending</span></td>
+          </tr>
+          <tr>
+            <td><span class="cat-dot" style="background:#E87038"></span>Beverages</td>
+            <td style="color:var(--muted)">Coca-Cola India</td>
+            <td style="font-weight:600">₹8,600</td>
+            <td style="color:var(--muted);font-size:12px">11 Mar</td>
+            <td><span class="status-pill paid">Paid</span></td>
+          </tr>
+          <tr>
+            <td><span class="cat-dot" style="background:#E05252"></span>Rent</td>
+            <td style="color:var(--muted)">Property Owner</td>
+            <td style="font-weight:600">₹75,000</td>
+            <td style="color:var(--muted);font-size:12px">01 Mar</td>
+            <td><span class="status-pill overdue">Overdue</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div>
+      <!-- AI Widget -->
+      <div class="ai-widget" style="margin-bottom:16px;">
+        <div class="ai-header">
+          <div class="ai-avatar">🤖</div>
+          <div>
+            <div class="ai-name">AI Sous-Chef</div>
+            <div class="ai-role">Your accounting assistant</div>
+          </div>
+        </div>
+        <div class="ai-insights">
+          <div class="insight">
+            <div class="insight-icon">⚠️</div>
+            <div class="insight-text"><strong>Food cost alert:</strong> Paneer spend is 18% above last month. Consider menu repricing or alternate supplier.</div>
+          </div>
+          <div class="insight">
+            <div class="insight-icon">💡</div>
+            <div class="insight-text"><strong>Weekend uplift:</strong> Fri–Sun revenue is 2.4× weekday. Staffing model can be optimised to save ~₹8k/month.</div>
+          </div>
+        </div>
+        <div class="ai-input-row">
+          <input class="ai-input" type="text" placeholder="Ask: 'Why did costs spike last week?'" />
+          <button class="ai-send">→</button>
+        </div>
+      </div>
+
+      <!-- Food Cost Tracker -->
+      <div class="panel">
+        <div class="panel-title">Food Cost Tracker <span>View all →</span></div>
+        <div class="food-items">
+          <div class="food-item">
+            <div class="food-emoji">🥩</div>
+            <div class="food-info">
+              <div class="food-name">Mutton (5kg)</div>
+              <div class="food-detail">Rajesh Traders · Auto-categorised</div>
+            </div>
+            <div>
+              <div class="food-cost cost-high">₹4,250</div>
+              <div class="food-pct">34% of dish cost</div>
+            </div>
+          </div>
+          <div class="food-item">
+            <div class="food-emoji">🧀</div>
+            <div class="food-info">
+              <div class="food-name">Paneer (10kg)</div>
+              <div class="food-detail">Amul Direct · Auto-categorised</div>
+            </div>
+            <div>
+              <div class="food-cost cost-warn">₹2,800</div>
+              <div class="food-pct">29% of dish cost</div>
+            </div>
+          </div>
+          <div class="food-item">
+            <div class="food-emoji">🛢️</div>
+            <div class="food-info">
+              <div class="food-name">Cooking Oil (20L)</div>
+              <div class="food-detail">Wholesale Market · AI matched</div>
+            </div>
+            <div>
+              <div class="food-cost cost-ok">₹1,900</div>
+              <div class="food-pct">18% of dish cost</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Invoice Add -->
+  <div class="panel">
+    <div class="panel-title">Quick Invoice Entry <span>View all invoices →</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div class="quick-form">
+        <div class="ai-suggest-row">
+          <span>✨</span>
+          <div class="ai-suggest-text">AI detected a likely invoice from Metro Cash &amp; Carry. Click to prefill →</div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Vendor Name</label>
+            <input class="form-input" type="text" placeholder="e.g. Metro Cash & Carry" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Amount (₹)</label>
+            <input class="form-input" type="text" placeholder="0.00" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select class="form-select">
+              <option>🥦 Ingredients</option>
+              <option>🍺 Beverages</option>
+              <option>👨‍🍳 Labour</option>
+              <option>⚡ Utilities</option>
+              <option>🏠 Rent</option>
+              <option>🛒 Packaging</option>
+              <option>🔧 Maintenance</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Due Date</label>
+            <input class="form-input" type="date" />
+          </div>
+        </div>
+        <button class="btn-primary">+ Add Invoice</button>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:14px;">Outstanding Invoices</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(224,82,82,0.07);border:1px solid rgba(224,82,82,0.2);border-radius:9px;">
+            <div><div style="font-size:13px;color:var(--white)">Property Rent – March</div><div style="font-size:11px;color:var(--red);margin-top:2px;">Overdue by 17 days</div></div>
+            <div style="font-size:14px;font-weight:700;color:var(--red)">₹75,000</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(232,168,56,0.05);border:1px solid rgba(232,168,56,0.15);border-radius:9px;">
+            <div><div style="font-size:13px;color:var(--white)">BSES Electricity</div><div style="font-size:11px;color:var(--amber);margin-top:2px;">Due in 3 days</div></div>
+            <div style="font-size:14px;font-weight:700;color:var(--amber)">₹18,200</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:9px;">
+            <div><div style="font-size:13px;color:var(--white)">Gas Cylinder Supply</div><div style="font-size:11px;color:var(--muted);margin-top:2px;">Due 25 Mar</div></div>
+            <div style="font-size:14px;font-weight:700;color:var(--text)">₹6,400</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+</body>
+</html>
